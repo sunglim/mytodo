@@ -1,0 +1,122 @@
+diff --git a/chrome/browser/extensions/BUILD.gn b/chrome/browser/extensions/BUILD.gn
+index 3deb4c4..fe0d86d 100644
+--- a/chrome/browser/extensions/BUILD.gn
++++ b/chrome/browser/extensions/BUILD.gn
+@@ -409,6 +409,8 @@ jumbo_static_library("extensions") {
+     "api/tabs/windows_event_router.h",
+     "api/tabs/windows_util.cc",
+     "api/tabs/windows_util.h",
++    "api/theme/theme_api.cc",
++    "api/theme/theme_api.h",
+     "api/top_sites/top_sites_api.cc",
+     "api/top_sites/top_sites_api.h",
+     "api/web_navigation/frame_navigation_state.cc",
+diff --git a/chrome/browser/extensions/api/theme/theme_api.cc b/chrome/browser/extensions/api/theme/theme_api.cc
+new file mode 100644
+index 0000000..5eb1d9d
+--- /dev/null
++++ b/chrome/browser/extensions/api/theme/theme_api.cc
+@@ -0,0 +1,21 @@
++// Copyright 2018 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "chrome/browser/extensions/api/theme/theme_api.h"
++
++#include "chrome/browser/themes/theme_service.h"
++#include "chrome/browser/profiles/profile.h"
++
++namespace extensions {
++
++ExtensionFunction::ResponseAction ThemeGetCurrentFunction::Run() {
++  Profile* profile = Profile::FromBrowserContext(browser_context());
++  auto& theme_provider = ThemeService::GetThemeProviderForProfile(profile);
++  auto color = theme_provider.GetColor(1);
++  LOG(INFO) << "color" << color;
++
++  return RespondNow(NoArguments());
++}
++
++}  // namespace extensions
+diff --git a/chrome/browser/extensions/api/theme/theme_api.h b/chrome/browser/extensions/api/theme/theme_api.h
+new file mode 100644
+index 0000000..ce9548fa
+--- /dev/null
++++ b/chrome/browser/extensions/api/theme/theme_api.h
+@@ -0,0 +1,22 @@
++// Copyright 2018 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef CHROME_BROWSER_EXTENSIONS_API_THEME_THEME_API_H_
++#define CHROME_BROWSER_EXTENSIONS_API_THEME_THEME_API_H_
++
++#include "chrome/browser/extensions/chrome_extension_function.h"
++
++namespace extensions {
++
++class ThemeGetCurrentFunction : public UIThreadExtensionFunction {
++ public:
++  ResponseAction Run() override;
++  DECLARE_EXTENSION_FUNCTION("theme.getCurrent", THEME_GETCURRENT)
++ private:
++  ~ThemeGetCurrentFunction() override {}
++};
++
++}  // namespace extensions
++
++#endif  // CHROME_BROWSER_EXTENSIONS_API_THEME_THEME_CAPTURE_API_H_
+diff --git a/chrome/common/extensions/api/_api_features.json b/chrome/common/extensions/api/_api_features.json
+index 0b59bc1..a48e4a2 100644
+--- a/chrome/common/extensions/api/_api_features.json
++++ b/chrome/common/extensions/api/_api_features.json
+@@ -175,6 +175,10 @@
+     "dependencies": ["permission:browser"],
+     "contexts": ["blessed_extension"]
+   },
++  "theme": {
++    "dependencies": ["permission:browser"],
++    "contexts": ["blessed_extension"]
++  },
+   "browserAction": {
+     "dependencies": ["manifest:browser_action"],
+     "contexts": ["blessed_extension"]
+diff --git a/chrome/common/extensions/api/api_sources.gni b/chrome/common/extensions/api/api_sources.gni
+index ea34622..26d6026 100644
+--- a/chrome/common/extensions/api/api_sources.gni
++++ b/chrome/common/extensions/api/api_sources.gni
+@@ -66,6 +66,7 @@ schema_sources_ = [
+   "system_private.json",
+   "tab_capture.idl",
+   "tabs.json",
++  "theme.idl",
+   "types.json",
+   "web_navigation.json",
+ 
+diff --git a/chrome/common/extensions/api/theme.idl b/chrome/common/extensions/api/theme.idl
+new file mode 100644
+index 0000000..60ec58e
+--- /dev/null
++++ b/chrome/common/extensions/api/theme.idl
+@@ -0,0 +1,9 @@
++// Copyright 2018 The Chromium Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++namespace theme {
++  interface Functions {
++    static void GetCurrent();
++  };
++};
+diff --git a/extensions/browser/extension_function_histogram_value.h b/extensions/browser/extension_function_histogram_value.h
+index 5fae30d..cd01fd1 100644
+--- a/extensions/browser/extension_function_histogram_value.h
++++ b/extensions/browser/extension_function_histogram_value.h
+@@ -1328,6 +1328,7 @@ enum HistogramValue {
+   ARCAPPSPRIVATE_GETLAUNCHABLEAPPS = 1265,
+   ARCAPPSPRIVATE_LAUNCHAPP = 1266,
+   AUTOTESTPRIVATE_RUNCROSTINIINSTALLER = 1267,
++  THEME_GETCURRENT = 1268,
+   // Last entry: Add new entries above, then run:
+   // python tools/metrics/histograms/update_extension_histograms.py
+   ENUM_BOUNDARY
